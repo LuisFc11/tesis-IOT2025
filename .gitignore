@@ -1,0 +1,13 @@
+# Ignorar archivo .env en Backend-SM
+Backend-SM/.env
+
+# Ignorar dependencias de Node.js en Backend-SM
+Backend-SM/node_modules/
+
+# Ignorar carpeta de compilación en Dashbboard-SM (generada por Vite)
+Dashbboard-SM/node_modules/
+Dashbboard-SM/dist/
+
+# Ignorar configuraciones de editores (opcional, si las tienes)
+.vscode/
+.idea/
