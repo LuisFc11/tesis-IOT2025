@@ -5,6 +5,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const mqtt = require('mqtt');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // Initialize Express app and HTTP server
 const app = express();
@@ -30,12 +32,65 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(() => console.log('Conectado a MongoDB'))
   .catch(err => console.error('Error en MongoDB:', err.message));
 
-// Modelo para almacenar eventos
+// User Schema
+const UserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true, unique: true }
+});
+const User = mongoose.model('User', UserSchema, 'usuarios');
+
+// Reporte Schema
 const ReporteSchema = new mongoose.Schema({
   message: String,
   timestamp: { type: Date, default: Date.now }
 });
 const Reporte = mongoose.model('Reporte', ReporteSchema);
+
+// Signup Endpoint
+app.post('/api/signup', async (req, res) => {
+  try {
+    const { username, password, email } = req.body;
+    if (!username || !password || !email) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Usuario o email ya existe' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, password: hashedPassword, email });
+    await newUser.save();
+
+    res.status(201).json({ message: 'Usuario creado exitosamente' });
+  } catch (err) {
+    console.error('Error al crear usuario:', err.message);
+    res.status(500).json({ error: 'Error al crear usuario' });
+  }
+});
+
+// Login Endpoint
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+    }
+
+    const user = await User.findOne({ username });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.json({ message: 'Login exitoso', token });
+  } catch (err) {
+    console.error('Error al iniciar sesión:', err.message);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
 
 // Ruta para obtener datos de Reporte
 app.get('/api/reports', async (req, res) => {
@@ -48,7 +103,7 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
-// Configuración del cliente MQTT
+// Configuración del cliente MQTT (mantiene lo que tenías)
 const mqttOptions = {
   port: parseInt(process.env.MQTT_PORT),
   username: process.env.MQTT_USER || undefined,
@@ -93,7 +148,6 @@ io.on('connection', (socket) => {
     try {
       const { password } = data;
 
-      // Validate password input
       if (!password || typeof password !== 'string' || password.length > 20) {
         console.error('Contraseña inválida o no proporcionada');
         socket.emit('alarmNotification', {
