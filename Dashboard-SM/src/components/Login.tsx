@@ -225,7 +225,7 @@ const Login: React.FC = () => {
                   style={{
                     display: 'block',
                     marginBottom: '8px',
-                    color: '#a0aec0',
+                    color: '#a0aec0 ',
                     fontSize: '14px',
                     fontWeight: '500',
                   }}
