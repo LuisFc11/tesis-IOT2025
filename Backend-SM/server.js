@@ -47,6 +47,17 @@ const ReporteSchema = new mongoose.Schema({
 });
 const Reporte = mongoose.model('Reporte', ReporteSchema);
 
+// Token verification middleware
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ error: 'Invalid token' });
+    req.user = decoded;
+    next();
+  });
+};
+
 // Signup Endpoint
 app.post('/api/signup', async (req, res) => {
   try {
@@ -85,10 +96,43 @@ app.post('/api/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ message: 'Login exitoso', token });
+    res.json({ message: 'Login exitoso', token, username: user.username, email: user.email });
   } catch (err) {
     console.error('Error al iniciar sesión:', err.message);
     res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
+
+// Update Profile Endpoint
+app.post('/api/update-profile', verifyToken, async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    let updated = false;
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) return res.status(400).json({ error: 'Nombre de usuario ya existe' });
+      user.username = username;
+      updated = true;
+    }
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) return res.status(400).json({ error: 'Email ya existe' });
+      user.email = email;
+      updated = true;
+    }
+
+    if (updated) {
+      await user.save();
+    }
+
+    const newToken = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.json({ message: 'Perfil actualizado', token: newToken, username: user.username, email: user.email });
+  } catch (err) {
+    console.error('Error al actualizar perfil:', err.message);
+    res.status(500).json({ error: 'Error al actualizar perfil' });
   }
 });
 
@@ -103,7 +147,7 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
-// Configuración del cliente MQTT (mantiene lo que tenías)
+// Configuración del cliente MQTT
 const mqttOptions = {
   port: parseInt(process.env.MQTT_PORT),
   username: process.env.MQTT_USER || undefined,
@@ -115,6 +159,10 @@ mqttClient.on('connect', () => {
   console.log('Conectado a MQTT');
   mqttClient.subscribe('home/alarm/status', (err) => {
     if (!err) console.log('Suscrito a home/alarm/status');
+    else console.error('Error al suscribirse a MQTT:', err.message);
+  });
+  mqttClient.subscribe('home/alarm/control', (err) => {
+    if (!err) console.log('Suscrito a home/alarm/control');
     else console.error('Error al suscribirse a MQTT:', err.message);
   });
 });
@@ -131,6 +179,7 @@ mqttClient.on('message', (topic, message) => {
     newReporte.save()
       .then(() => {
         console.log(`Guardado en Reporte desde ${topic}: ${message}`);
+        // Broadcast to all Socket.io clients
         io.emit('alarmNotification', { message: JSON.stringify(data), timestamp: new Date() });
       })
       .catch(err => console.error('Error al guardar en Reporte:', err.message));
@@ -150,7 +199,7 @@ io.on('connection', (socket) => {
 
       if (!password || typeof password !== 'string' || password.length > 20) {
         console.error('Contraseña inválida o no proporcionada');
-        socket.emit('alarmNotification', {
+        io.emit('alarmNotification', {
           message: JSON.stringify({ error: 'Invalid or missing password' }),
           timestamp: new Date(),
         });
@@ -162,7 +211,7 @@ io.on('connection', (socket) => {
       mqttClient.publish('home/alarm/control', mqttMessage, { qos: 1 }, (err) => {
         if (err) {
           console.error('Error al publicar MQTT:', err.message);
-          socket.emit('alarmNotification', {
+          io.emit('alarmNotification', {
             message: JSON.stringify({ error: 'Failed to publish MQTT message' }),
             timestamp: new Date(),
           });
@@ -172,11 +221,27 @@ io.on('connection', (socket) => {
       });
     } catch (err) {
       console.error('Error al procesar disarmAlarm:', err.message);
-      socket.emit('alarmNotification', {
+      io.emit('alarmNotification', {
         message: JSON.stringify({ error: 'Invalid request format' }),
         timestamp: new Date(),
       });
     }
+  });
+
+  socket.on('activateAlarm', () => {
+    console.log('Solicitud de activación recibida');
+    const mqttMessage = JSON.stringify({ action: 'activate' });
+    mqttClient.publish('home/alarm/control', mqttMessage, { qos: 1 }, (err) => {
+      if (err) {
+        console.error('Error al publicar MQTT:', err.message);
+        io.emit('alarmNotification', {
+          message: JSON.stringify({ error: 'Failed to publish MQTT message' }),
+          timestamp: new Date(),
+        });
+      } else {
+        console.log('Mensaje de activación MQTT publicado exitosamente');
+      }
+    });
   });
 
   socket.on('disconnect', () => {
