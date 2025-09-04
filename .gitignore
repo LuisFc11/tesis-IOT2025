@@ -1,6 +1,9 @@
 # Ignorar archivo .env en Backend-SM
 Backend-SM/.env
 
+# Ignora el archivo .env de contador de personas
+Contador-Personas/.env
+
 # Ignorar dependencias de Node.js en Backend-SM
 Backend-SM/node_modules/
 

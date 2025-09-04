@@ -612,63 +612,59 @@ const activateAlarm = () => {
     );
   };
 
-  const renderCameraView = () => {
-    if (!showCameraView) return null;
+ const renderCameraView = (): JSX.Element | null => {
+  if (!showCameraView) return null;
 
-    return (
-      <div className="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4 animate-fade-in">
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all duration-300 scale-100 hover:scale-[1.01] border border-gray-700">
-          <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
-            <h2 className="text-xl font-bold text-gray-100 tracking-tight flex items-center">
-              <FiVideo className="mr-2" /> Vista de cámara de seguridad
-            </h2>
-            <button
-              onClick={handleCameraReviewComplete}
-              className="text-gray-400 hover:text-gray-100 transition-colors transform hover:rotate-90 duration-300"
-            >
-              <FiX size={24} />
-            </button>
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all duration-300 scale-100 hover:scale-[1.01] border border-gray-700">
+        <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
+          <h2 className="text-xl font-bold text-gray-100 tracking-tight flex items-center">
+            <FiVideo className="mr-2" /> Vista de cámara de seguridad
+          </h2>
+          <button
+            onClick={handleCameraReviewComplete}
+            className="text-gray-400 hover:text-gray-100 transition-colors transform hover:rotate-90 duration-300"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="bg-gray-700/50 aspect-video flex items-center justify-center rounded-xl mb-6 shadow-inner relative overflow-hidden">
+            <img
+              src="http://192.168.18.25:8080/video"
+              alt="Cámara IP"
+              className="w-full h-full object-cover"
+              onError={() => toast.error('Error al cargar el video de la cámara.', { autoClose: 3000 })}
+            />
           </div>
-          <div className="p-6">
-            <div className="bg-gray-700/50 aspect-video flex items-center justify-center rounded-xl mb-6 shadow-inner relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900/50 to-gray-800/50"></div>
-              <div className="text-center z-10">
-                <FiVideo size={64} className="mx-auto text-gray-400 mb-4 animate-pulse" />
-                <p className="text-gray-400 font-medium">Simulación de vista de cámara</p>
-                <div className="mt-4 bg-gray-600/50 rounded-lg p-4 inline-block shadow-lg backdrop-blur-sm">
-                  <div className="flex animate-pulse space-x-2">
-                    <div className="bg-red-600 rounded-full w-4 h-4"></div>
-                    <div className="bg-red-600 rounded-full w-4 h-4"></div>
-                  </div>
-                  <p className="text-sm text-gray-400 mt-2">Grabando en curso...</p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-gray-700/50 p-4 rounded-lg shadow-sm transition-all duration-300 hover:bg-gray-700/70">
+              <h3 className="font-medium mb-2 text-gray-100 flex items-center">
+                <FiVideo className="mr-2 text-amber-500" /> Cámara Principal
+              </h3>
+              <p className="text-sm text-gray-400">Transmisión en vivo desde IP Webcam</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-700/50 p-4 rounded-lg shadow-sm transition-all duration-300 hover:bg-gray-700/70">
-                <h3 className="font-medium mb-2 text-gray-100 flex items-center">
-                  <FiVideo className="mr-2 text-amber-500" /> Cámara Principal
-                </h3>
-                <p className="text-sm text-gray-400">Entrada - Último movimiento: hace 0:23 seg</p>
-              </div>
-              <div className="bg-gray-700/50 p-4 rounded-lg shadow-sm transition-all duration-300 hover:bg-gray-700/70">
-                <h3 className="font-medium mb-2 text-gray-100 flex items-center">
-                  <FiVideo className="mr-2 text-amber-500" /> Cámara Trasera
-                </h3>
-                <p className="text-sm text-gray-400">Jardín - Sin movimiento</p>
-              </div>
+            <div className="bg-gray-700/50 p-4 rounded-lg shadow-sm transition-all duration-300 hover:bg-gray-700/70">
+              <h3 className="font-medium mb-2 text-gray-100 flex items-center">
+                <FiVideo className="mr-2 text-amber-500" /> Estado
+              </h3>
+              <p className="text-sm text-gray-400">
+                {isAlarmActive ? 'Alarma activa' : 'Sistema seguro'}
+              </p>
             </div>
-            <button
-              onClick={handleCameraReviewComplete}
-              className="w-full mt-6 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700 text-gray-100 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              Continuar con verificación
-            </button>
           </div>
+          <button
+            onClick={handleCameraReviewComplete}
+            className="w-full mt-6 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700 text-gray-100 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+          >
+            Continuar con verificación
+          </button>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderDashboard = () => (
     <div className="space-y-8">
